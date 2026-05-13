@@ -1,2 +1,7 @@
 node_modules/
 calculator.db
+amplify_outputs.json
+.amplify/
+AWs Keys/
+sandbox.log
+.claude/

@@ -225,6 +225,18 @@
     const historyList  = document.getElementById('historyList');
     const serverStatus = document.getElementById('serverStatus');
 
+    let API_BASE = '';
+
+    async function initAmplify() {
+      try {
+        const res = await fetch('/amplify_outputs.json');
+        if (res.ok) {
+          const outputs = await res.json();
+          API_BASE = outputs.custom?.api_url ?? '';
+        }
+      } catch {}
+    }
+
     let current = '0';
     let previous = null;
     let operator = null;
@@ -304,7 +316,7 @@
 
     async function saveHistory(expression, result) {
       try {
-        await fetch('/api/history', {
+        await fetch(API_BASE + 'api/history', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ expression, result })
@@ -315,7 +327,7 @@
 
     async function loadHistory() {
       try {
-        const res = await fetch('/api/history');
+        const res = await fetch(API_BASE + 'api/history');
         if (!res.ok) throw new Error();
         const rows = await res.json();
         serverStatus.textContent = 'Connected to database';
@@ -329,7 +341,7 @@
 
     async function clearHistory() {
       try {
-        await fetch('/api/history', { method: 'DELETE' });
+        await fetch(API_BASE + 'api/history', { method: 'DELETE' });
         loadHistory();
       } catch {}
     }
@@ -388,7 +400,7 @@
       }
     });
 
-    loadHistory();
+    initAmplify().then(() => loadHistory());
   </script>
 </body>
 </html>
