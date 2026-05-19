@@ -163,16 +163,6 @@
       text-align: center;
       margin-top: 40px;
     }
-
-    .server-status {
-      font-size: 11px;
-      padding: 4px 10px;
-      border-radius: 6px;
-      margin-bottom: 16px;
-      text-align: center;
-    }
-    .server-status.ok     { background: #0d3320; color: #48bb78; }
-    .server-status.error  { background: #3d1515; color: #fc8181; }
   </style>
 </head>
 <body>
@@ -209,7 +199,6 @@
   </div>
 
   <div class="history-panel">
-    <div id="serverStatus" class="server-status"></div>
     <div class="history-header">
       <h2>History</h2>
       <button class="btn-clear-history" id="btnClearHistory">Clear all</button>
@@ -223,19 +212,8 @@
     const displayEl    = document.getElementById('display');
     const expressionEl = document.getElementById('expression');
     const historyList  = document.getElementById('historyList');
-    const serverStatus = document.getElementById('serverStatus');
 
-    let API_BASE = '';
-
-    async function initAmplify() {
-      try {
-        const res = await fetch('/amplify_outputs.json');
-        if (res.ok) {
-          const outputs = await res.json();
-          API_BASE = outputs.custom?.api_url ?? '';
-        }
-      } catch {}
-    }
+    const HISTORY_KEY = 'calc_history';
 
     let current = '0';
     let previous = null;
@@ -294,8 +272,6 @@
       const expr = `${previous} ${opSymbol(operator)} ${val}`;
       expressionEl.textContent = `${expr} =`;
       current = isNaN(result) ? 'Error' : String(parseFloat(result.toFixed(10)));
-      const savedPrev = previous;
-      const savedOp   = operator;
       previous = null;
       operator = null;
       waitingForOperand = true;
@@ -312,38 +288,23 @@
     function toggleSign() { current = String(parseFloat(current) * -1); updateDisplay(); }
     function percent()    { current = String(parseFloat(current) / 100); updateDisplay(); }
 
-    // ── API ──────────────────────────────────────────────────────────────────
+    // ── History (sessionStorage — clears automatically when tab is closed) ────
 
-    async function saveHistory(expression, result) {
-      try {
-        await fetch(API_BASE + 'api/history', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ expression, result })
-        });
-        loadHistory();
-      } catch {}
+    function getHistory() {
+      try { return JSON.parse(sessionStorage.getItem(HISTORY_KEY)) || []; }
+      catch { return []; }
     }
 
-    async function loadHistory() {
-      try {
-        const res = await fetch(API_BASE + 'api/history');
-        if (!res.ok) throw new Error();
-        const rows = await res.json();
-        serverStatus.textContent = 'Connected to database';
-        serverStatus.className = 'server-status ok';
-        renderHistory(rows);
-      } catch {
-        serverStatus.textContent = 'Database unavailable — start the server';
-        serverStatus.className = 'server-status error';
-      }
+    function saveHistory(expression, result) {
+      const history = getHistory();
+      history.unshift({ expression, result, created_at: new Date().toISOString() });
+      sessionStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+      renderHistory(history);
     }
 
-    async function clearHistory() {
-      try {
-        await fetch(API_BASE + 'api/history', { method: 'DELETE' });
-        loadHistory();
-      } catch {}
+    function clearHistory() {
+      sessionStorage.removeItem(HISTORY_KEY);
+      renderHistory([]);
     }
 
     function renderHistory(rows) {
@@ -400,7 +361,7 @@
       }
     });
 
-    initAmplify().then(() => loadHistory());
+    renderHistory(getHistory());
   </script>
 </body>
 </html>
