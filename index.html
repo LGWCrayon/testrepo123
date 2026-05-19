@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Calculator</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      min-height: 100vh;
+      padding: 40px 20px;
+      background: #1a1a2e;
+      font-family: 'Segoe UI', sans-serif;
+      gap: 24px;
+    }
+
+    .calculator {
+      background: #16213e;
+      border-radius: 20px;
+      padding: 24px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+      width: 320px;
+      flex-shrink: 0;
+    }
+
+    .display {
+      background: #0f3460;
+      border-radius: 12px;
+      padding: 16px 20px;
+      margin-bottom: 20px;
+      text-align: right;
+    }
+
+    .display .expression {
+      color: #a0aec0;
+      font-size: 14px;
+      min-height: 20px;
+      margin-bottom: 6px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .display .value {
+      color: #e2e8f0;
+      font-size: 36px;
+      font-weight: 300;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .buttons {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+    }
+
+    button {
+      border: none;
+      border-radius: 12px;
+      font-size: 18px;
+      font-weight: 500;
+      padding: 18px 0;
+      cursor: pointer;
+      transition: transform 0.1s, opacity 0.1s;
+    }
+
+    button:active { transform: scale(0.94); }
+
+    .btn-num  { background: #1a2a4a; color: #e2e8f0; }
+    .btn-num:hover  { background: #1e3a5f; }
+    .btn-op   { background: #e94560; color: #fff; }
+    .btn-op:hover   { opacity: 0.85; }
+    .btn-util { background: #0f3460; color: #a0aec0; }
+    .btn-util:hover { background: #1a4a7a; }
+    .btn-equals { background: #e94560; color: #fff; grid-column: span 2; }
+    .btn-equals:hover { opacity: 0.85; }
+    .btn-zero { grid-column: span 2; }
+
+    /* History panel */
+    .history-panel {
+      background: #16213e;
+      border-radius: 20px;
+      padding: 24px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+      width: 280px;
+      display: flex;
+      flex-direction: column;
+      max-height: 600px;
+    }
+
+    .history-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+
+    .history-header h2 {
+      color: #e2e8f0;
+      font-size: 16px;
+      font-weight: 600;
+    }
+
+    .btn-clear-history {
+      background: #0f3460;
+      color: #a0aec0;
+      border: none;
+      border-radius: 8px;
+      padding: 6px 12px;
+      font-size: 12px;
+      cursor: pointer;
+    }
+
+    .btn-clear-history:hover { background: #1a4a7a; color: #e2e8f0; }
+
+    .history-list {
+      overflow-y: auto;
+      flex: 1;
+    }
+
+    .history-list::-webkit-scrollbar { width: 4px; }
+    .history-list::-webkit-scrollbar-track { background: transparent; }
+    .history-list::-webkit-scrollbar-thumb { background: #0f3460; border-radius: 2px; }
+
+    .history-item {
+      padding: 12px 14px;
+      border-radius: 10px;
+      margin-bottom: 8px;
+      background: #0f3460;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    .history-item:hover { background: #1a4a7a; }
+
+    .history-item .hist-expr {
+      color: #a0aec0;
+      font-size: 12px;
+      margin-bottom: 4px;
+    }
+
+    .history-item .hist-result {
+      color: #e2e8f0;
+      font-size: 20px;
+      font-weight: 300;
+    }
+
+    .history-item .hist-time {
+      color: #4a6a8a;
+      font-size: 10px;
+      margin-top: 4px;
+    }
+
+    .history-empty {
+      color: #4a6a8a;
+      font-size: 14px;
+      text-align: center;
+      margin-top: 40px;
+    }
+
+    .server-status {
+      font-size: 11px;
+      padding: 4px 10px;
+      border-radius: 6px;
+      margin-bottom: 16px;
+      text-align: center;
+    }
+    .server-status.ok     { background: #0d3320; color: #48bb78; }
+    .server-status.error  { background: #3d1515; color: #fc8181; }
+  </style>
+</head>
+<body>
+  <div class="calculator">
+    <div class="display">
+      <div class="expression" id="expression"></div>
+      <div class="value" id="display">0</div>
+    </div>
+    <div class="buttons">
+      <button class="btn-util" data-action="clear">AC</button>
+      <button class="btn-util" data-action="sign">+/-</button>
+      <button class="btn-util" data-action="percent">%</button>
+      <button class="btn-op"   data-action="op" data-op="/">÷</button>
+
+      <button class="btn-num" data-action="num" data-num="7">7</button>
+      <button class="btn-num" data-action="num" data-num="8">8</button>
+      <button class="btn-num" data-action="num" data-num="9">9</button>
+      <button class="btn-op"  data-action="op" data-op="*">×</button>
+
+      <button class="btn-num" data-action="num" data-num="4">4</button>
+      <button class="btn-num" data-action="num" data-num="5">5</button>
+      <button class="btn-num" data-action="num" data-num="6">6</button>
+      <button class="btn-op"  data-action="op" data-op="-">−</button>
+
+      <button class="btn-num" data-action="num" data-num="1">1</button>
+      <button class="btn-num" data-action="num" data-num="2">2</button>
+      <button class="btn-num" data-action="num" data-num="3">3</button>
+      <button class="btn-op"  data-action="op" data-op="+">+</button>
+
+      <button class="btn-num btn-zero" data-action="num" data-num="0">0</button>
+      <button class="btn-num" data-action="decimal">.</button>
+      <button class="btn-equals" data-action="equals">=</button>
+    </div>
+  </div>
+
+  <div class="history-panel">
+    <div id="serverStatus" class="server-status"></div>
+    <div class="history-header">
+      <h2>History</h2>
+      <button class="btn-clear-history" id="btnClearHistory">Clear all</button>
+    </div>
+    <div class="history-list" id="historyList">
+      <div class="history-empty">No history yet</div>
+    </div>
+  </div>
+
+  <script>
+    const displayEl    = document.getElementById('display');
+    const expressionEl = document.getElementById('expression');
+    const historyList  = document.getElementById('historyList');
+    const serverStatus = document.getElementById('serverStatus');
+
+    let API_BASE = '';
+
+    async function initAmplify() {
+      try {
+        const res = await fetch('/amplify_outputs.json');
+        if (res.ok) {
+          const outputs = await res.json();
+          API_BASE = outputs.custom?.api_url ?? '';
+        }
+      } catch {}
+    }
+
+    let current = '0';
+    let previous = null;
+    let operator = null;
+    let waitingForOperand = false;
+
+    function updateDisplay() {
+      displayEl.textContent = current.length > 10
+        ? parseFloat(current).toExponential(4)
+        : current;
+    }
+
+    function inputNum(num) {
+      if (waitingForOperand) { current = num; waitingForOperand = false; }
+      else { current = current === '0' ? num : current + num; }
+      updateDisplay();
+    }
+
+    function inputDecimal() {
+      if (waitingForOperand) { current = '0.'; waitingForOperand = false; updateDisplay(); return; }
+      if (!current.includes('.')) { current += '.'; updateDisplay(); }
+    }
+
+    function inputOperator(op) {
+      const val = parseFloat(current);
+      if (previous !== null && !waitingForOperand) {
+        const result = calculate(previous, val, operator);
+        current = String(parseFloat(result.toFixed(10)));
+        updateDisplay();
+        previous = parseFloat(current);
+      } else {
+        previous = val;
+      }
+      operator = op;
+      waitingForOperand = true;
+      expressionEl.textContent = `${previous} ${opSymbol(op)}`;
+    }
+
+    function calculate(a, b, op) {
+      switch (op) {
+        case '+': return a + b;
+        case '-': return a - b;
+        case '*': return a * b;
+        case '/': return b !== 0 ? a / b : NaN;
+      }
+    }
+
+    function opSymbol(op) {
+      return { '+': '+', '-': '−', '*': '×', '/': '÷' }[op] || op;
+    }
+
+    function equals() {
+      if (previous === null || operator === null) return;
+      const val = parseFloat(current);
+      const result = calculate(previous, val, operator);
+      const expr = `${previous} ${opSymbol(operator)} ${val}`;
+      expressionEl.textContent = `${expr} =`;
+      current = isNaN(result) ? 'Error' : String(parseFloat(result.toFixed(10)));
+      const savedPrev = previous;
+      const savedOp   = operator;
+      previous = null;
+      operator = null;
+      waitingForOperand = true;
+      updateDisplay();
+      if (!isNaN(result)) saveHistory(expr, current);
+    }
+
+    function clear() {
+      current = '0'; previous = null; operator = null; waitingForOperand = false;
+      expressionEl.textContent = '';
+      updateDisplay();
+    }
+
+    function toggleSign() { current = String(parseFloat(current) * -1); updateDisplay(); }
+    function percent()    { current = String(parseFloat(current) / 100); updateDisplay(); }
+
+    // ── API ──────────────────────────────────────────────────────────────────
+
+    async function saveHistory(expression, result) {
+      try {
+        await fetch(API_BASE + 'api/history', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ expression, result })
+        });
+        loadHistory();
+      } catch {}
+    }
+
+    async function loadHistory() {
+      try {
+        const res = await fetch(API_BASE + 'api/history');
+        if (!res.ok) throw new Error();
+        const rows = await res.json();
+        serverStatus.textContent = 'Connected to database';
+        serverStatus.className = 'server-status ok';
+        renderHistory(rows);
+      } catch {
+        serverStatus.textContent = 'Database unavailable — start the server';
+        serverStatus.className = 'server-status error';
+      }
+    }
+
+    async function clearHistory() {
+      try {
+        await fetch(API_BASE + 'api/history', { method: 'DELETE' });
+        loadHistory();
+      } catch {}
+    }
+
+    function renderHistory(rows) {
+      if (!rows.length) {
+        historyList.innerHTML = '<div class="history-empty">No history yet</div>';
+        return;
+      }
+      historyList.innerHTML = rows.map(r => `
+        <div class="history-item" data-result="${r.result}">
+          <div class="hist-expr">${r.expression}</div>
+          <div class="hist-result">= ${r.result}</div>
+          <div class="hist-time">${new Date(r.created_at).toLocaleString()}</div>
+        </div>
+      `).join('');
+    }
+
+    historyList.addEventListener('click', e => {
+      const item = e.target.closest('.history-item');
+      if (!item) return;
+      current = item.dataset.result;
+      waitingForOperand = false;
+      updateDisplay();
+    });
+
+    document.getElementById('btnClearHistory').addEventListener('click', clearHistory);
+
+    // ── Input ────────────────────────────────────────────────────────────────
+
+    document.querySelector('.buttons').addEventListener('click', e => {
+      const btn = e.target.closest('button');
+      if (!btn) return;
+      const action = btn.dataset.action;
+      if (action === 'num')     inputNum(btn.dataset.num);
+      if (action === 'decimal') inputDecimal();
+      if (action === 'op')      inputOperator(btn.dataset.op);
+      if (action === 'equals')  equals();
+      if (action === 'clear')   clear();
+      if (action === 'sign')    toggleSign();
+      if (action === 'percent') percent();
+    });
+
+    document.addEventListener('keydown', e => {
+      if (e.key >= '0' && e.key <= '9') inputNum(e.key);
+      if (e.key === '.')  inputDecimal();
+      if (e.key === '+')  inputOperator('+');
+      if (e.key === '-')  inputOperator('-');
+      if (e.key === '*')  inputOperator('*');
+      if (e.key === '/') { e.preventDefault(); inputOperator('/'); }
+      if (e.key === 'Enter' || e.key === '=') equals();
+      if (e.key === 'Escape') clear();
+      if (e.key === 'Backspace') {
+        if (current.length > 1) { current = current.slice(0, -1); updateDisplay(); }
+        else { current = '0'; updateDisplay(); }
+      }
+    });
+
+    initAmplify().then(() => loadHistory());
+  </script>
+</body>
+</html>

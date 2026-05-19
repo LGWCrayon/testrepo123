@@ -13,7 +13,7 @@ frontend:
   artifacts:
     baseDirectory: .
     files:
-      - calculator.html
+      - index.html
       - amplify_outputs.json
   cache:
     paths:
